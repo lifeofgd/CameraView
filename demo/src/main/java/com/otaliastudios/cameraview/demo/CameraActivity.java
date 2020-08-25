@@ -1,47 +1,54 @@
 package com.otaliastudios.cameraview.demo;
 
-import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
-
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.otaliastudios.cameraview.CameraException;
 import com.otaliastudios.cameraview.CameraListener;
 import com.otaliastudios.cameraview.CameraLogger;
 import com.otaliastudios.cameraview.CameraOptions;
 import com.otaliastudios.cameraview.CameraView;
 import com.otaliastudios.cameraview.PictureResult;
-import com.otaliastudios.cameraview.controls.Mode;
 import com.otaliastudios.cameraview.VideoResult;
+import com.otaliastudios.cameraview.controls.Mode;
 import com.otaliastudios.cameraview.controls.Preview;
 import com.otaliastudios.cameraview.filter.Filters;
-import com.otaliastudios.cameraview.filter.MultiFilter;
-import com.otaliastudios.cameraview.filters.BrightnessFilter;
-import com.otaliastudios.cameraview.filters.DuotoneFilter;
 import com.otaliastudios.cameraview.frame.Frame;
 import com.otaliastudios.cameraview.frame.FrameProcessor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.disposables.Disposable;
 
 
 public class CameraActivity extends AppCompatActivity implements View.OnClickListener, OptionView.Callback {
@@ -56,6 +63,19 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
 
     private int mCurrentFilter = 0;
     private final Filters[] mAllFilters = Filters.values();
+
+    Disposable bpmDisposable;
+    Disposable elapsedDisposable;
+
+    TextView tvMessage;
+    TextView tvCurrentTime;
+    TextView tvElapsedTime;
+
+    long startedTime = System.currentTimeMillis();
+
+    ImageView ivFavorite;
+    AlphaAnimation blinkAnimation;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,8 +98,10 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
                     lastTime = newTime;
                     LOG.v("Frame delayMillis:", delay, "FPS:", 1000 / delay);
                     if (DECODE_BITMAP) {
+                        LOG.v("Flag1");
                         if (frame.getFormat() == ImageFormat.NV21
                                 && frame.getDataClass() == byte[].class) {
+                            LOG.v("Flag2");
                             byte[] data = frame.getData();
                             YuvImage yuvImage = new YuvImage(data,
                                     frame.getFormat(),
@@ -173,20 +195,47 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
         });
 
         // Animate the watermark just to show we record the animation in video snapshots
-        ValueAnimator animator = ValueAnimator.ofFloat(1F, 0.8F);
-        animator.setDuration(300);
-        animator.setRepeatCount(ValueAnimator.INFINITE);
-        animator.setRepeatMode(ValueAnimator.REVERSE);
-        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                float scale = (float) animation.getAnimatedValue();
-                watermark.setScaleX(scale);
-                watermark.setScaleY(scale);
-                watermark.setRotation(watermark.getRotation() + 2);
-            }
+//        ValueAnimator animator = ValueAnimator.ofFloat(1F, 0.8F);
+//        animator.setDuration(300);
+//        animator.setRepeatCount(ValueAnimator.INFINITE);
+//        animator.setRepeatMode(ValueAnimator.REVERSE);
+//        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//            @Override
+//            public void onAnimationUpdate(ValueAnimator animation) {
+//                float scale = (float) animation.getAnimatedValue();
+//                watermark.setScaleX(scale);
+//                watermark.setScaleY(scale);
+//                watermark.setRotation(watermark.getRotation() + 2);
+//            }
+//        });
+//        animator.start();
+
+        tvMessage = (TextView) findViewById(R.id.tv_message);
+        tvCurrentTime = (TextView) findViewById(R.id.tv_current_time);
+        tvElapsedTime = (TextView) findViewById(R.id.tv_elapsed_time);
+        ivFavorite = (ImageView) findViewById(R.id.iv_favorite);
+
+        blinkAnimation = new AlphaAnimation(0.0f, 1.0f);
+        blinkAnimation.setDuration(1000);
+        blinkAnimation.setRepeatMode(Animation.REVERSE);
+        blinkAnimation.setRepeatCount(Animation.INFINITE);
+
+        ivFavorite.startAnimation(blinkAnimation);
+
+        bpmDisposable = Observable.interval(1000, TimeUnit.MILLISECONDS).observeOn(AndroidSchedulers.mainThread()).subscribe(aLong -> {
+            int bpm = new Random().nextInt(150) + 50;
+            tvMessage.setText(bpm + "");
+            blinkAnimation.setDuration(bpm);
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            tvCurrentTime.setText(format.format(Calendar.getInstance().getTime()));
         });
-        animator.start();
+        startedTime = System.currentTimeMillis();
+
+        elapsedDisposable = Observable.interval(50, TimeUnit.MILLISECONDS).observeOn(AndroidSchedulers.mainThread()).subscribe(aLong -> {
+            SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss.SSS");
+            format.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
+            tvElapsedTime.setText(format.format(System.currentTimeMillis() - startedTime));
+        });
     }
 
     private void message(@NonNull String content, boolean important) {
@@ -341,8 +390,8 @@ public class CameraActivity extends AppCompatActivity implements View.OnClickLis
             message("Video snapshots are only allowed with the GL_SURFACE preview.", true);
             return;
         }
-        message("Recording snapshot for 5 seconds...", true);
-        camera.takeVideoSnapshot(new File(getFilesDir(), "video.mp4"), 5000);
+        message("Recording snapshot for 60 minutes...", true);
+        camera.takeVideoSnapshot(new File(getFilesDir(), "video.mp4"), 30 * 60 * 1000);
     }
 
     private void toggleCamera() {

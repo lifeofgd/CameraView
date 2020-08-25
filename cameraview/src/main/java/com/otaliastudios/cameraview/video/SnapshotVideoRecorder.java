@@ -1,23 +1,24 @@
 package com.otaliastudios.cameraview.video;
 
 import android.graphics.SurfaceTexture;
-import android.media.MediaFormat;
-import android.media.MediaRecorder;
 import android.opengl.EGL14;
 import android.os.Build;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+
 import com.otaliastudios.cameraview.CameraLogger;
-import com.otaliastudios.cameraview.controls.AudioCodec;
-import com.otaliastudios.cameraview.internal.DeviceEncoders;
-import com.otaliastudios.cameraview.overlay.Overlay;
 import com.otaliastudios.cameraview.VideoResult;
 import com.otaliastudios.cameraview.controls.Audio;
 import com.otaliastudios.cameraview.engine.CameraEngine;
+import com.otaliastudios.cameraview.filter.Filter;
+import com.otaliastudios.cameraview.internal.DeviceEncoders;
+import com.otaliastudios.cameraview.overlay.Overlay;
 import com.otaliastudios.cameraview.overlay.OverlayDrawer;
 import com.otaliastudios.cameraview.preview.RendererCameraPreview;
 import com.otaliastudios.cameraview.preview.RendererFrameCallback;
 import com.otaliastudios.cameraview.preview.RendererThread;
-import com.otaliastudios.cameraview.filter.Filter;
 import com.otaliastudios.cameraview.size.Size;
 import com.otaliastudios.cameraview.video.encoding.AudioConfig;
 import com.otaliastudios.cameraview.video.encoding.AudioMediaEncoder;
@@ -25,10 +26,6 @@ import com.otaliastudios.cameraview.video.encoding.EncoderThread;
 import com.otaliastudios.cameraview.video.encoding.MediaEncoderEngine;
 import com.otaliastudios.cameraview.video.encoding.TextureConfig;
 import com.otaliastudios.cameraview.video.encoding.TextureMediaEncoder;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 
 /**
  * A {@link VideoRecorder} that uses {@link android.media.MediaCodec} APIs.
